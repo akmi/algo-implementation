@@ -1,0 +1,195 @@
+// Aim             : Finding closest pair of points
+// Algorithm       : Line Sweep (Using the concept of Divide and Conquer)
+// Time Complexity : O(NlogN)
+
+#include<cstdio>
+#include<iostream>
+#include<cmath>
+#include<algorithm>
+using namespace std;
+#define inf (1LL<<60)
+
+// structure of a point
+// x = x coordinate
+// y = y coordinate
+// index = index of the point ( as it was in the input )
+
+struct point
+{
+       int x;
+       int y;
+       int index;     
+};
+
+bool flag[57002];
+
+// square of a number
+
+long long sq(long long a)
+{
+     return (a*a);
+}
+
+// distance between two points
+
+long long dist(point &a, point &b)
+{
+     return (sq(a.x-b.x)+sq(a.y-b.y));
+}
+
+// compare function for sort (STL) for sorting in ascending order according to x-coordinates 
+// and if x-coordinates are same, then sort according to y-coordinates.
+
+bool compx(const point &a, const point &b)
+{
+     if(a.x==b.x)
+     return (a.y<b.y);
+     return (a.x<b.x);
+}
+
+// compare function for sort (STL) for sorting in ascending order according to y-coordinates
+// and  if y-coordinates are same, then sort according to x-coordinates.
+
+bool compy(const point &a, const point &b)
+{
+     if(a.y==b.y)
+     return (a.x<b.x);
+     return (a.y<b.y);
+}
+
+// compute the closest pair of points
+
+// point X = stores the points sorted according to x ccordinates
+// point Y = stores the points sorted according to y coordinates
+// px = stores the index of the first point in the closest pair of points
+// py = stores the index of the second point in the closest pair of points
+// n = stores the total number of points
+// XL = stores the points on the left side of the middle point sorted according to the x coordinates
+// XR = stores the points on the right side of the middle point sorted according to the x coordinates
+// YL = stores the points on the left side of the middle point sorted according to the y coordinates
+// YR = stores the points on the right side of the middle point sorted according to the y coordinates
+// Y_strip = stores the points whose separation from the middle point is less than min (it is used, if the two points having minimum
+// distance are on the opposite side of the middle point)
+// Xm = stores the middle point which separates the points in the left and right direction.
+// left = stores the minimum distance on the left side of the middle point (Xm)
+// right = stores the minimum distance on the right side of the middle point (Xm)
+// flag = hashes the indices of the points on the left side of the middle point with 0 and with 1 that are on the right side
+// flag is used to construct XL, XR, YL, YR.
+
+long long closest_pair(point *X, point *Y, int &px, int &py, int n)
+{
+     // if only one point is given in input, then there can not be a pair of points (pretty obvious..:P)
+     // also, if n becomes 1 as a result of divide operation (m=n>>1) then return 1LL<<60 to make left(long long)      
+     // high enough so that it is not selected as minimum value (min(long long))
+     
+     if(n==1)
+     return inf;
+     
+     // if n=2, then return the distance between these two points along with 
+     // defining the pair (px and py) with the indices of the two points
+     
+     if(n==2)
+     {
+             px=X[0].index;
+             py=X[1].index;
+             return (dist(X[0],X[1]));
+     }     
+     
+     int m=n>>1,i,j;
+     point XL[m+1],XR[m+1],YL[m+1],YR[m+1],Y_strip[n+1];
+     point X_mid=X[m-1];
+     long long min, left, right;
+     int px1, py1, px2, py2;
+     for(i=0;i<m;++i)
+     {
+                     XL[i]=X[i];
+                     flag[X[i].index]=0;
+                     }
+     for(;i<n;++i)
+     {
+                  XR[i-m]=X[i];
+                  flag[X[i].index]=1;
+                  }
+     int n1, n2;
+     n1=0;
+     n2=0;
+     for(i=0;i<n;++i)
+     {
+                     if(!flag[Y[i].index])
+                     YL[n1++]=Y[i];
+                     else
+                     YR[n2++]=Y[i];
+                     }
+     left=closest_pair(XL, YL, px1, py1, n1);
+     right=closest_pair(XR, YR, px2, py2, n2);
+     if(left<right)
+     {
+                   min=left;
+                   px=px1;
+                   py=py1;
+                   }
+     else
+     {
+         min=right;
+         px=px2;
+         py=py2;
+     }
+     int n3=0;
+     for(i=0;i<n;++i) // form the strip of points having separation (according to x coordinates) from the middle point less than min
+     {
+                     if(sq(Y[i].x-X_mid.x)<min)
+                     Y_strip[n3++]=Y[i];
+                     }
+     
+     // Now the most important part arrives..
+     // At first, the below loop might give you an impression of O(n^2) complexity but I assure you it is not.
+     // For every point in the strip we might have to consider atmost 7 points (that too in the worst case)
+     // Here's how :-
+     // 1. Since the strip formed above have points that have separation less than min from the middle point, there cannot
+     //    be two points on one side of the middle point in the strip having distance less than min (read it again if you don't get it.)
+     // 2. Now, sq(Y_strip[i].y-Y_strip[j].y)<min condition ensures that we cannot enter more than 7 times in the inner loop as
+     //    a square of side 2*min formed for every point in the strip with half distance on either side of the middle point cannot 
+     //    accomodate more than 7 points (excluding the point itself). (4 points on corners of each square formed on both side of the 
+     //    middle point of side (min) )
+     // So, the below loop has worst case complexity of O(7*n) i.e O(n)
+     
+     for(i=0;i<n3;++i)
+     {
+                        for(j=i+1;(j<n3 && sq(Y_strip[i].y-Y_strip[j].y)<min);++j) // form the square having 
+                        {
+                                        long long tmp=dist(Y_strip[i],Y_strip[j]);
+                                        if(tmp<min)
+                                        {
+                                                   min=tmp;
+                                                   px=Y_strip[i].index;
+                                                   py=Y_strip[j].index;
+                                        }
+                        }
+     }
+     return min;
+}
+int main()
+{
+    int n, i, x_coord, y_coord;    
+    scanf("%d",&n);
+    struct point P[n+1];
+    for(i=0;i<n;++i)
+    {
+                    scanf("%d%d", &x_coord, &y_coord);
+                    P[i].x = x_coord;
+                    P[i].y = y_coord;
+                    P[i].index = i;
+                    }
+    struct point X[n+1], Y[n+1];
+    for(i=0;i<n;++i)
+    {
+                    X[i]=P[i];
+                    Y[i]=P[i];
+                    }
+    sort(X,X+n,compx); // sorting the points according to x coordinates
+    sort(Y,Y+n,compy); // sorting the points according to y coordinates
+    int Px, Py;
+    long long min_dist = closest_pair(X,Y,Px,Py,n);
+    printf("The closest pair of points are: (%d, %d) and (%d, %d)\n", P[Px].x, P[Px].y, P[Py].x, P[Py].y);
+    return 0;
+}
